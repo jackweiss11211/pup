@@ -16,9 +16,17 @@ app.post('/search', async (req, res) => {
 
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
+    
     await page.goto(`https://www.google.com/search?q=${query}`);
-
+    
+    // Wait for the search results to be visible on the page
+    await page.waitForSelector('#search');
+    
     const screenshotPath = 'screenshot.png';
+    
+    // Wait for a brief moment to allow any dynamic content to load
+    await page.waitForTimeout(2000);
+    
     const htmlContent = await page.content();
 
     await page.screenshot({ path: screenshotPath });
