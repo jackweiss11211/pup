@@ -19,41 +19,48 @@ app.post('/search', async (req, res) => {
 
     await page.goto('https://www.google.com');
 
-    // Wait for the search input field to be present on the page
-    await page.waitForSelector('input#input.truncate');
+    // Wait for a container element to be present on the page
+    await page.waitForSelector('.search-container');
 
-    // Type the search query into the Google search input field
-    await page.type('input#input.truncate', query);
+    // Once the container element is present, find the search input field inside it
+    const searchInput = await page.$('input#input.truncate');
+    
+    if (searchInput) {
+      // Type the search query into the Google search input field
+      await searchInput.type(query);
 
-    // Press Enter to submit the search query
-    await page.keyboard.press('Enter');
+      // Press Enter to submit the search query
+      await page.keyboard.press('Enter');
 
-    // Wait for the search results to load using a specific selector
-    await page.waitForSelector('h3');
+      // Wait for the search results to load using a specific selector
+      await page.waitForSelector('h3');
 
-    const screenshotPath = 'screenshot.png';
+      const screenshotPath = 'screenshot.png';
 
-    // Wait for a brief moment to allow any dynamic content to load
-    await page.waitForTimeout(2000);
+      // Wait for a brief moment to allow any dynamic content to load
+      await page.waitForTimeout(2000);
 
-    const htmlContent = await page.content();
+      const htmlContent = await page.content();
 
-    await page.screenshot({ path: screenshotPath, fullPage: true });
+      await page.screenshot({ path: screenshotPath, fullPage: true });
 
-    const zipPath = 'results.zip';
-    const output = fs.createWriteStream(zipPath);
-    const archive = archiver('zip', {
-      zlib: { level: 9 }
-    });
+      const zipPath = 'results.zip';
+      const output = fs.createWriteStream(zipPath);
+      const archive = archiver('zip', {
+        zlib: { level: 9 }
+      });
 
-    output.on('close', () => {
-      res.download(zipPath);
-    });
+      output.on('close', () => {
+        res.download(zipPath);
+      });
 
-    archive.pipe(output);
-    archive.append(htmlContent, { name: 'results.html' });
-    archive.file(screenshotPath, { name: 'screenshot.png' });
-    archive.finalize();
+      archive.pipe(output);
+      archive.append(htmlContent, { name: 'results.html' });
+      archive.file(screenshotPath, { name: 'screenshot.png' });
+      archive.finalize();
+    } else {
+      throw new Error('Search input field not found');
+    }
 
     await browser.close();
   } catch (error) {
