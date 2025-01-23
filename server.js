@@ -19,10 +19,10 @@ app.post('/search', async (req, res) => {
 
     await page.goto('https://www.google.com');
 
-    // Wait for a container element to be present on the page
-    await page.waitForSelector('.search-container');
+    // Wait for the search input field to be visible on the page
+    await page.waitForSelector('input#input.truncate', { visible: true });
 
-    // Once the container element is present, find the search input field inside it
+    // Find the search input field
     const searchInput = await page.$('input#input.truncate');
     
     if (searchInput) {
