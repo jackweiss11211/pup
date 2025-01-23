@@ -29,7 +29,8 @@ app.post('/search', async (req, res) => {
     
     const htmlContent = await page.content();
 
-    await page.screenshot({ path: screenshotPath });
+    await page.screenshot({ path: screenshotPath,
+                          fullScreen: true});
 
     const zipPath = 'results.zip';
     const output = fs.createWriteStream(zipPath);
