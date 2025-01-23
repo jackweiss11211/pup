@@ -17,50 +17,35 @@ app.post('/search', async (req, res) => {
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
 
-    await page.goto('https://www.google.com');
+    // Navigate directly to the Google search results page with the query in the URL
+    await page.goto(`https://www.google.com/search?q=${encodeURIComponent(query)}`);
 
-    // Wait for the search input field to be visible on the page
-    await page.waitForSelector('input#input.truncate', { visible: true });
+    // Wait for the search results to load using a specific selector
+    await page.waitForSelector('h3');
 
-    // Find the search input field
-    const searchInput = await page.$('input#input.truncate');
-    
-    if (searchInput) {
-      // Type the search query into the Google search input field
-      await searchInput.type(query);
+    const screenshotPath = 'screenshot.png';
 
-      // Press Enter to submit the search query
-      await page.keyboard.press('Enter');
+    // Wait for a brief moment to allow any dynamic content to load
+    await page.waitForTimeout(2000);
 
-      // Wait for the search results to load using a specific selector
-      await page.waitForSelector('h3');
+    const htmlContent = await page.content();
 
-      const screenshotPath = 'screenshot.png';
+    await page.screenshot({ path: screenshotPath, fullPage: true });
 
-      // Wait for a brief moment to allow any dynamic content to load
-      await page.waitForTimeout(2000);
+    const zipPath = 'results.zip';
+    const output = fs.createWriteStream(zipPath);
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
 
-      const htmlContent = await page.content();
+    output.on('close', () => {
+      res.download(zipPath);
+    });
 
-      await page.screenshot({ path: screenshotPath, fullPage: true });
-
-      const zipPath = 'results.zip';
-      const output = fs.createWriteStream(zipPath);
-      const archive = archiver('zip', {
-        zlib: { level: 9 }
-      });
-
-      output.on('close', () => {
-        res.download(zipPath);
-      });
-
-      archive.pipe(output);
-      archive.append(htmlContent, { name: 'results.html' });
-      archive.file(screenshotPath, { name: 'screenshot.png' });
-      archive.finalize();
-    } else {
-      throw new Error('Search input field not found');
-    }
+    archive.pipe(output);
+    archive.append(htmlContent, { name: 'results.html' });
+    archive.file(screenshotPath, { name: 'screenshot.png' });
+    archive.finalize();
 
     await browser.close();
   } catch (error) {
