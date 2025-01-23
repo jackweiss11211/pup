@@ -1,3 +1,9 @@
+const express = require('express');
+const path = require('path');
+const puppeteer = require('puppeteer');
+const fs = require('fs');
+const archiver = require('archiver');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -5,41 +11,46 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/search', async (req, res) => {
-  const { query } = req.body;
+  try {
+    const { query } = req.body;
 
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
 
-  await page.goto(`https://www.google.com/search?q=${query}`);
+    await page.goto(`https://www.google.com/search?q=${query}`);
 
-  // Wait for a different selector that may indicate the search results have loaded
-  await page.waitForSelector('h3');
+    // Wait for a different selector that may indicate the search results have loaded
+    await page.waitForSelector('h3');
 
-  const screenshotPath = 'screenshot.png';
+    const screenshotPath = 'screenshot.png';
 
-  // Wait for a brief moment to allow any dynamic content to load
-  await page.waitForTimeout(2000);
+    // Wait for a brief moment to allow any dynamic content to load
+    await page.waitForTimeout(2000);
 
-  const htmlContent = await page.content();
+    const htmlContent = await page.content();
 
-  await page.screenshot({ path: screenshotPath, fullPage: true });
+    await page.screenshot({ path: screenshotPath, fullPage: true });
 
-  const zipPath = 'results.zip';
-  const output = fs.createWriteStream(zipPath);
-  const archive = archiver('zip', {
-    zlib: { level: 9 }
-  });
+    const zipPath = 'results.zip';
+    const output = fs.createWriteStream(zipPath);
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
 
-  output.on('close', () => {
-    res.download(zipPath);
-  });
+    output.on('close', () => {
+      res.download(zipPath);
+    });
 
-  archive.pipe(output);
-  archive.append(htmlContent, { name: 'results.html' });
-  archive.file(screenshotPath, { name: 'screenshot.png' });
-  archive.finalize();
+    archive.pipe(output);
+    archive.append(htmlContent, { name: 'results.html' });
+    archive.file(screenshotPath, { name: 'screenshot.png' });
+    archive.finalize();
 
-  await browser.close();
+    await browser.close();
+  } catch (error) {
+    console.error('An error occurred:', error);
+    res.status(500).send('An error occurred. Please try again later.');
+  }
 });
 
 app.listen(PORT, () => {
