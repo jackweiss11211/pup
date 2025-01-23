@@ -17,9 +17,15 @@ app.post('/search', async (req, res) => {
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
 
-    await page.goto(`https://www.google.com/search?q=${query}`);
+    await page.goto('https://www.google.com');
 
-    // Wait for a different selector that may indicate the search results have loaded
+    // Type the search query into the Google search input field
+    await page.type('input[name="q"]', query);
+
+    // Press Enter to submit the search query
+    await page.keyboard.press('Enter');
+
+    // Wait for the search results to load using a specific selector
     await page.waitForSelector('h3');
 
     const screenshotPath = 'screenshot.png';
