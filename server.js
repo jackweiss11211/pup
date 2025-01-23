@@ -11,49 +11,44 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/search', async (req, res) => {
-  try {
-    const { query } = req.body;
+    try {
+        const { query } = req.body;
 
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
+        const browser = await puppeteer.launch();
+        const page = await browser.newPage();
 
-    // Navigate directly to the Google search results page with the query in the URL
-    await page.goto(`https://www.google.com/search?q=${encodeURIComponent(query)}`);
+        // Navigate directly to the Google search results page with the query in the URL
+        await page.goto(`https://www.google.com/search?q=${encodeURIComponent(query)}`);
 
-    // Wait for the search results to load using a specific selector
-    await page.waitForSelector('h3');
+        // Wait for the page to fully load by waiting for the 'load' event
+        await page.waitForNavigation({ waitUntil: 'load' });
 
-    const screenshotPath = 'screenshot.png';
+        const screenshotPath = 'screenshot.png';
+        const htmlContent = await page.content();
+        await page.screenshot({ path: screenshotPath, fullPage: true });
 
-    // Wait for a brief moment to allow any dynamic content to load
-    await page.waitForTimeout(2000);
+        const zipPath = 'results.zip';
+        const output = fs.createWriteStream(zipPath);
+        const archive = archiver('zip', {
+            zlib: { level: 9 }
+        });
 
-    const htmlContent = await page.content();
+        output.on('close', () => {
+            res.download(zipPath);
+        });
 
-    await page.screenshot({ path: screenshotPath, fullPage: true });
+        archive.pipe(output);
+        archive.append(htmlContent, { name: 'results.html' });
+        archive.file(screenshotPath, { name: 'screenshot.png' });
+        archive.finalize();
 
-    const zipPath = 'results.zip';
-    const output = fs.createWriteStream(zipPath);
-    const archive = archiver('zip', {
-      zlib: { level: 9 }
-    });
-
-    output.on('close', () => {
-      res.download(zipPath);
-    });
-
-    archive.pipe(output);
-    archive.append(htmlContent, { name: 'results.html' });
-    archive.file(screenshotPath, { name: 'screenshot.png' });
-    archive.finalize();
-
-    await browser.close();
-  } catch (error) {
-    console.error('An error occurred:', error);
-    res.status(500).send('An error occurred. Please try again later.');
-  }
+        await browser.close();
+    } catch (error) {
+        console.error('An error occurred:', error);
+        res.status(500).send('An error occurred. Please try again later.');
+    }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
