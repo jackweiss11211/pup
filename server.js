@@ -20,10 +20,10 @@ app.post('/search', async (req, res) => {
     await page.goto('https://www.google.com');
 
     // Wait for the search input field to be present on the page
-    await page.waitForSelector('input[name="q"]');
+    await page.waitForSelector('input#input.truncate');
 
     // Type the search query into the Google search input field
-    await page.type('input[name="q"]', query);
+    await page.type('input#input.truncate', query);
 
     // Press Enter to submit the search query
     await page.keyboard.press('Enter');
