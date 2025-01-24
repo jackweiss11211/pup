@@ -1,8 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const fs = require('fs');
 const archiver = require('archiver');
+
+puppeteer.use(StealthPlugin());
 
 const app = express();
 const port = 3000;
@@ -19,9 +22,12 @@ app.get('/', (req, res) => {
 app.post('/search', async (req, res) => {
   const { query } = req.body;
 
-  // Launch Puppeteer browser
+  // Launch Puppeteer browser with stealth mode
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
+
+  // Set a custom user-agent
+  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36');
 
   // Set a longer timeout for navigation
   await page.goto(`https://www.google.com/search?q=${query}`, { waitUntil: 'networkidle2', timeout: 60000 });
