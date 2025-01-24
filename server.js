@@ -7,7 +7,6 @@ const path = require('path');
 
 const app = express();
 app.use(bodyParser.json());
-
 app.use(express.static(path.join(__dirname, 'public')));
 async function takeScreenshotAndHTML(query) {
   const browser = await puppeteer.launch();
@@ -26,6 +25,7 @@ async function takeScreenshotAndHTML(query) {
 
 function createZip() {
   const zipFilePath = path.join(__dirname, 'search-results.zip'); // Full path to save the zip file
+  console.log('Creating zip file at:', zipFilePath);
   const output = fs.createWriteStream(zipFilePath);
   const archive = archiver('zip', { zlib: { level: 9 } });
 
@@ -46,6 +46,7 @@ app.post('/search', async (req, res) => {
     await takeScreenshotAndHTML(query);
     createZip();
     const zipFilePath = path.join(__dirname, 'search-results.zip'); // Full path to the zip file
+    console.log('Downloading zip file from:', zipFilePath);
     res.download(zipFilePath);
   } catch (error) {
     console.error('Error processing search:', error);
