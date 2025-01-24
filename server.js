@@ -3,58 +3,49 @@ const bodyParser = require('body-parser');
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const archiver = require('archiver');
-const path = require('path');
 
 const app = express();
+const port = 3000;
+
+// Middleware to parse JSON bodies
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
-async function takeScreenshotAndHTML(query) {
+
+// Serve the index.html file when the client accesses the root endpoint
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
+
+// POST endpoint for handling search requests
+app.post('/search', async (req, res) => {
+  const { query } = req.body;
+
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
   await page.goto(`https://www.google.com/search?q=${query}`);
-
-  // Take a screenshot
+  
+  // Take a screenshot of the search results
   await page.screenshot({ path: 'screenshot.png' });
 
-  // Get the HTML content
+  // Get the HTML content of the search results
   const htmlContent = await page.content();
-  fs.writeFileSync('search-results.html', htmlContent);
 
-  await browser.close();
-}
-
-function createZip() {
-  const zipFilePath = path.join(__dirname, 'search-results.zip'); // Full path to save the zip file
-  console.log('Creating zip file at:', zipFilePath);
-  const output = fs.createWriteStream(zipFilePath);
-  const archive = archiver('zip', { zlib: { level: 9 } });
-
-  output.on('close', () => {
-    console.log('Zip file created');
+  // Create a zip file with the screenshot and HTML content
+  const output = fs.createWriteStream('results.zip');
+  const archive = archiver('zip', {
+    zlib: { level: 9 } // Sets the compression level
   });
-
   archive.pipe(output);
   archive.file('screenshot.png', { name: 'screenshot.png' });
-  archive.file('search-results.html', { name: 'search-results.html' });
-  archive.finalize();
-}
+  archive.append(htmlContent, { name: 'search_results.html' });
+  await archive.finalize();
 
-app.post('/search', async (req, res) => {
-  const query = req.body.query;
+  // Send the zip file as the response
+  res.download('results.zip');
 
-  try {
-    await takeScreenshotAndHTML(query);
-    createZip();
-    const zipFilePath = path.join(__dirname, 'search-results.zip'); // Full path to the zip file
-    console.log('Downloading zip file from:', zipFilePath);
-    res.download(zipFilePath);
-  } catch (error) {
-    console.error('Error processing search:', error);
-    res.status(500).send('Error processing search');
-  }
+  // Close the browser
+  await browser.close();
 });
 
-const PORT = process.env.PORT || 3000; // Use environment variable for port or default to 3000
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
