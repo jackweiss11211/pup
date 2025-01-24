@@ -23,6 +23,9 @@ app.post('/search', async (req, res) => {
   const page = await browser.newPage();
   await page.goto(`https://www.google.com/search?q=${query}`);
   
+  // Wait for the search results to load
+  await page.waitForSelector('#search');
+  
   // Take a screenshot of the search results
   await page.screenshot({ path: 'screenshot.png' });
 
