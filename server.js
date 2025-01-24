@@ -21,11 +21,13 @@ app.post('/search', async (req, res) => {
 
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
+
+  // Navigate to the search page
   await page.goto(`https://www.google.com/search?q=${query}`);
-  
-  // Wait for the search results to load with an increased timeout value
-  await page.waitForSelector('#search', { timeout: 5000 }); // Increase the timeout value to 5000ms
-  
+
+  // Wait for the page to signal that it has finished loading
+  await page.waitForNavigation({ waitUntil: 'load' });
+
   // Take a screenshot of the search results
   await page.screenshot({ path: 'screenshot.png' });
 
