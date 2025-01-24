@@ -1,54 +1,55 @@
 const express = require('express');
-const path = require('path');
+const bodyParser = require('body-parser');
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const archiver = require('archiver');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(bodyParser.json());
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+async function takeScreenshotAndHTML(query) {
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.goto(`https://www.google.com/search?q=${query}`);
+
+  // Take a screenshot
+  await page.screenshot({ path: 'screenshot.png' });
+
+  // Get the HTML content
+  const htmlContent = await page.content();
+  fs.writeFileSync('search-results.html', htmlContent);
+
+  await browser.close();
+}
+
+function createZip() {
+  const output = fs.createWriteStream('search-results.zip');
+  const archive = archiver('zip', { zlib: { level: 9 } });
+
+  output.on('close', () => {
+    console.log('Zip file created');
+  });
+
+  archive.pipe(output);
+  archive.file('screenshot.png', { name: 'screenshot.png' });
+  archive.file('search-results.html', { name: 'search-results.html' });
+  archive.finalize();
+}
 
 app.post('/search', async (req, res) => {
-    try {
-        const { query } = req.body;
+  const query = req.body.query;
 
-        const browser = await puppeteer.launch();
-        const page = await browser.newPage();
-
-        // Navigate directly to the Google search results page with the query in the URL
-        await page.goto(`https://www.google.com/search?q=${encodeURIComponent(query)}`);
-
-        // Wait for the page to fully load by waiting for the 'load' event
-        await page.waitForNavigation({ waitUntil: 'load' });
-
-        const screenshotPath = 'screenshot.png';
-        const htmlContent = await page.content();
-        await page.screenshot({ path: screenshotPath, fullPage: true });
-
-        const zipPath = 'results.zip';
-        const output = fs.createWriteStream(zipPath);
-        const archive = archiver('zip', {
-            zlib: { level: 9 }
-        });
-
-        output.on('close', () => {
-            res.download(zipPath);
-        });
-
-        archive.pipe(output);
-        archive.append(htmlContent, { name: 'results.html' });
-        archive.file(screenshotPath, { name: 'screenshot.png' });
-        archive.finalize();
-
-        await browser.close();
-    } catch (error) {
-        console.error('An error occurred:', error);
-        res.status(500).send('An error occurred. Please try again later.');
-    }
+  try {
+    await takeScreenshotAndHTML(query);
+    createZip();
+    res.download('search-results.zip');
+  } catch (error) {
+    console.error('Error processing search:', error);
+    res.status(500).send('Error processing search');
+  }
 });
 
+const PORT = process.env.PORT || 3000; // Use environment variable for port or default to 3000
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
