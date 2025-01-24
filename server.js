@@ -3,10 +3,11 @@ const bodyParser = require('body-parser');
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const archiver = require('archiver');
-
 const path = require('path');
+
 const app = express();
 app.use(bodyParser.json());
+
 app.use(express.static(path.join(__dirname, 'public')));
 async function takeScreenshotAndHTML(query) {
   const browser = await puppeteer.launch();
@@ -24,7 +25,8 @@ async function takeScreenshotAndHTML(query) {
 }
 
 function createZip() {
-  const output = fs.createWriteStream('search-results.zip'); // Save the zip file in the current directory
+  const zipFilePath = path.join(__dirname, 'search-results.zip'); // Full path to save the zip file
+  const output = fs.createWriteStream(zipFilePath);
   const archive = archiver('zip', { zlib: { level: 9 } });
 
   output.on('close', () => {
@@ -43,7 +45,8 @@ app.post('/search', async (req, res) => {
   try {
     await takeScreenshotAndHTML(query);
     createZip();
-    res.download('search-results.zip');
+    const zipFilePath = path.join(__dirname, 'search-results.zip'); // Full path to the zip file
+    res.download(zipFilePath);
   } catch (error) {
     console.error('Error processing search:', error);
     res.status(500).send('Error processing search');
