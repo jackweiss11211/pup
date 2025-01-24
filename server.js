@@ -3,10 +3,10 @@ const bodyParser = require('body-parser');
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const archiver = require('archiver');
-const path = require('path');
+
 const app = express();
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
 async function takeScreenshotAndHTML(query) {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
@@ -23,7 +23,7 @@ async function takeScreenshotAndHTML(query) {
 }
 
 function createZip() {
-  const output = fs.createWriteStream('search-results.zip');
+  const output = fs.createWriteStream('search-results.zip'); // Save the zip file in the current directory
   const archive = archiver('zip', { zlib: { level: 9 } });
 
   output.on('close', () => {
