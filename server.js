@@ -37,13 +37,30 @@ app.post('/search', async (req, res) => {
   const archive = archiver('zip', {
     zlib: { level: 9 } // Sets the compression level
   });
+
+  output.on('close', () => {
+    // Send the zip file as the response
+    res.download('results.zip', (err) => {
+      if (err) {
+        console.error('Error downloading the zip file:', err);
+        res.status(500).send('Error downloading the zip file');
+      }
+
+      // Clean up the files
+      fs.unlinkSync('screenshot.png');
+      fs.unlinkSync('results.zip');
+    });
+  });
+
+  archive.on('error', (err) => {
+    console.error('Archive error:', err);
+    res.status(500).send('Error creating the archive');
+  });
+
   archive.pipe(output);
   archive.file('screenshot.png', { name: 'screenshot.png' });
   archive.append(htmlContent, { name: 'search_results.html' });
   await archive.finalize();
-
-  // Send the zip file as the response
-  res.download('results.zip');
 
   // Close the browser
   await browser.close();
