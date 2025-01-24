@@ -4,9 +4,10 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const archiver = require('archiver');
 
+const path = require('path');
 const app = express();
 app.use(bodyParser.json());
-
+app.use(express.static(path.join(__dirname, 'public')));
 async function takeScreenshotAndHTML(query) {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
