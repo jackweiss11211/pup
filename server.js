@@ -23,8 +23,8 @@ app.post('/search', async (req, res) => {
   const page = await browser.newPage();
   await page.goto(`https://www.google.com/search?q=${query}`);
   
-  // Wait for the search results to load
-  await page.waitForSelector('#search');
+  // Wait for the search results to load with an increased timeout value
+  await page.waitForSelector('#search', { timeout: 5000 }); // Increase the timeout value to 5000ms
   
   // Take a screenshot of the search results
   await page.screenshot({ path: 'screenshot.png' });
