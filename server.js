@@ -1,5 +1,5 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const archiver = require('archiver');
 const cors = require('cors');
 const path = require('path');
@@ -28,7 +28,15 @@ app.post('/search', async (req, res) => {
 
     try {
         // Launch browser
-        const browser = await puppeteer.launch();
+        const browser = await puppeteer.launch({
+            headless: "new",
+            executablePath: process.platform === 'win32'
+                ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+                : process.platform === 'linux'
+                    ? '/usr/bin/google-chrome'
+                    : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
         const page = await browser.newPage();
         
         // Set viewport to a reasonable size
